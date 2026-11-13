@@ -1,0 +1,23 @@
+# dependencies & build artifacts
+node_modules/
+vendor/
+dist/
+dist-portable/
+dist-final/
+out/
+*.asar
+
+# binaries (published via GitHub Releases, not tracked)
+*.exe
+*.zip
+*.7z
+*.msi
+*.dmg
+
+# local / editor
+.DS_Store
+Thumbs.db
+*.log
+*.bak
+.env
+.env.*

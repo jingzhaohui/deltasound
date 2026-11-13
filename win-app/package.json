@@ -1,0 +1,42 @@
+{
+  "name": "deltasound",
+  "version": "1.0.0",
+  "description": "三角洲行动听声增强 - 独立 DSP 复刻",
+  "main": "main.js",
+  "author": "DeltaSound",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "com.deltasound.desktop",
+    "productName": "DeltaSound",
+    "copyright": "DeltaSound 2026",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "renderer/**/*", "build/icon.ico", "build/default-config.txt"],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "DeltaSound",
+      "artifactName": "DeltaSound-Setup-${version}.exe"
+    },
+    "portable": {
+      "artifactName": "DeltaSound-Portable-${version}.exe"
+    }
+  }
+}

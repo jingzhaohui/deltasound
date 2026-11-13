@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DeltaSound · 三角洲听声增强复刻原型</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#151b23; --panel2:#1b232e; --line:#2a3543;
+    --txt:#e6edf3; --dim:#8b98a8; --accent:#3ddc97; --warn:#ff9f43; --red:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1280px;margin:0 auto;padding:28px 24px 48px}
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:22px;flex-wrap:wrap}
+  h1{font-size:22px;margin:0;letter-spacing:.5px}
+  h1 span{color:var(--accent)}
+  .sub{color:var(--dim);font-size:12.5px;margin-top:4px}
+  .badge{font-size:11.5px;color:var(--dim);border:1px solid var(--line);border-radius:20px;padding:5px 12px;white-space:nowrap}
+  .badge b{color:var(--accent);font-weight:600}
+  .grid{display:grid;grid-template-columns:270px 1fr 300px;gap:18px}
+  @media(max-width:1000px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .card h2{font-size:13px;margin:0 0 14px;color:var(--dim);font-weight:600;letter-spacing:1px;text-transform:uppercase}
+  .btn{display:block;width:100%;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:10px 12px;text-align:left;cursor:pointer;font-size:13px;margin-bottom:8px;transition:.15s}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);color:#062015;border-color:var(--accent);font-weight:700;text-align:center}
+  .btn.primary:hover{background:#5ce8ac;color:#062015}
+  .btn.active{border-color:var(--accent);color:var(--accent);background:#123027}
+  .btn small{display:block;color:var(--dim);font-size:11px;margin-top:2px}
+  .btn:hover small{color:inherit;opacity:.75}
+  .row{display:flex;gap:8px}
+  .hint{font-size:11.5px;color:var(--dim);margin:10px 0 0;line-height:1.5}
+  .slider{margin-bottom:15px}
+  .slider .lab{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:5px}
+  .slider .lab b{font-weight:600}
+  .slider .lab em{font-style:normal;color:var(--accent);font-variant-numeric:tabular-nums;font-size:12px}
+  .slider .desc{font-size:11px;color:var(--dim);margin-top:3px}
+  input[type=range]{width:100%;-webkit-appearance:none;height:4px;border-radius:4px;background:var(--line);outline:none;margin:4px 0}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg)}
+  input[type=range].warn::-webkit-slider-thumb{background:var(--warn)}
+  .divider{height:1px;background:var(--line);margin:16px 0}
+  .toggle{display:flex;align-items:center;justify-content:space-between;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:11px 13px;margin-bottom:14px}
+  .toggle strong{font-size:13px}
+  .toggle span{font-size:11px;color:var(--dim);display:block}
+  .switch{position:relative;width:44px;height:24px;flex:none}
+  .switch input{opacity:0;width:0;height:0}
+  .switch i{position:absolute;inset:0;background:#39424f;border-radius:24px;cursor:pointer;transition:.2s}
+  .switch i:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .switch input:checked + i{background:var(--accent)}
+  .switch input:checked + i:before{transform:translateX(20px)}
+  canvas{width:100%;height:130px;display:block;background:#0b1016;border-radius:8px;border:1px solid var(--line)}
+  .meters{display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim);margin-top:10px;font-variant-numeric:tabular-nums}
+  .meters b{color:var(--txt);font-weight:600}
+  .chain{margin-top:14px;font-size:11px;color:var(--dim);line-height:2}
+  .chain span{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:2px 7px;margin:0 2px 4px 0;color:var(--txt)}
+  .chain span.hot{border-color:var(--accent);color:var(--accent)}
+  textarea{width:100%;height:150px;background:#0b1016;color:#9fe8c4;border:1px solid var(--line);border-radius:8px;padding:12px;font:11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical;margin-top:10px}
+  footer{margin-top:22px;font-size:11.5px;color:var(--dim);border-top:1px solid var(--line);padding-top:14px}
+  .filelabel{display:block;cursor:pointer}
+  .status{font-size:11.5px;color:var(--warn);min-height:18px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Delta<span>Sound</span> · 三角洲听声增强复刻原型</h1>
+      <div class="sub">风声压下去 / 脚步浮上来 / 枪声不刺耳 —— 独立 DSP 实现</div>
+    </div>
+    <div class="badge">引擎状态 <b id="engineState">未启动</b> · <span id="srText">—</span></div>
+  </header>
+
+  <div class="grid">
+    <!-- 左：音源 -->
+    <div class="card">
+      <h2>1 · 音源</h2>
+      <button class="btn primary" id="btnDemo">▶ 播放演示音（内置合成）</button>
+      <div class="hint" style="margin:-2px 0 12px">8 秒循环：稳态风声 + 脚步/静步 + 3 声枪响 + 环境底噪，专为对比设计。</div>
+      <label class="btn filelabel">⇪ 上传游戏录音 (WAV/MP3)<small>用自己的音频做 A/B 对比</small><input type="file" id="fileInput" accept="audio/*" hidden></label>
+      <button class="btn" id="btnMic">🎙 麦克风实时处理<small>请戴耳机，避免啸叫</small></button>
+      <button class="btn" id="btnStop">■ 停止</button>
+      <div class="divider"></div>
+      <div class="toggle">
+        <div><strong>音效总开关</strong><span>关掉 = 原声</span></div>
+        <label class="switch"><input type="checkbox" id="bypass" checked><i></i></label>
+      </div>
+      <div class="status" id="status">点「播放演示音」开始，浏览器会要求一次用户手势。</div>
+      <div class="hint">提示：拖底部的「旁路 A/B」可无缝切换处理前后；<b>戴耳机</b>效果最明显。</div>
+    </div>
+
+    <!-- 中：参数 -->
+    <div class="card">
+      <h2>2 · 五个频段 + 三项动态</h2>
+      <div id="sliders"></div>
+      <div class="divider"></div>
+      <h2>3 · 导出</h2>
+      <button class="btn" id="btnExport">⤓ 生成 Equalizer APO 配置</button>
+      <textarea id="exportBox" readonly placeholder="按当前滑块生成的 config.txt 内容会出现在这里，可直接覆盖 Equalizer APO 配置。"></textarea>
+      <div class="hint">静态 EQ 与本机 Web Audio 链参数一一对应；「防炸耳 / 瞬态增强 / 风声抵消」属动态处理，Equalizer APO 需另挂 ReaComp + ReaLimit（见 README）。</div>
+    </div>
+
+    <!-- 右：可视化 -->
+    <div class="card">
+      <h2>4 · 实时监视</h2>
+      <canvas id="spectrum" width="600" height="260"></canvas>
+      <div class="meters">
+        <div>输入峰值 <b id="mIn">-∞</b></div>
+        <div>风声抵消 <b id="mWind">0%</b></div>
+        <div>防炸耳 GR <b id="mGr">0.0 dB</b></div>
+      </div>
+      <div class="divider"></div>
+      <h2>处理链</h2>
+      <div class="chain">
+        <span>输入</span>→<span class="hot">HPF 140Hz</span>→<span class="hot">稳态风声抵消</span>→<span>5 段 EQ</span>→<span class="hot">瞬态 / 安静段提升</span>→<span class="hot">高频去刺</span>→<span class="hot">压缩 + 限幅</span>→<span>输出</span>
+      </div>
+      <div class="hint" style="margin-top:12px">对应原软件 <code>wind / eq / footstep_boost / quiet_boost_db / boom_threshold / output_gain</code> 六组参数，全部用通用 DSP 重写。</div>
+    </div>
+  </div>
+
+  <footer>DeltaSound · 独立实现，不依赖任何第三方专有资源 · 设计与文档见仓库 README · 只支持立体声</footer>
+</div>
+
+<script>
+"use strict";
+// ---------------- 参数定义 ----------------
+const DEFS = [
+  {k:'body',    n:'震感',     d:'爆炸、载具的低沉震动。调高后容易盖住脚步',       v:0.5, unit:'dB', max:5.0},
+  {k:'foot',    n:'脚步',     d:'脚步落地的厚实声。调高后枪声也变响',             v:0.5, unit:'dB', max:5.0},
+  {k:'quiet',   n:'静步',     d:'蹲走轻脚步；安静段动态抬升',                     v:0.5, unit:'dB', max:5.0},
+  {k:'surface', n:'路面',     d:'铁板 / 木板 / 碎石的质感',                       v:0.5, unit:'dB', max:5.0},
+  {k:'detail',  n:'细碎声',   d:'草丛 / 衣物摩擦。调高更刺耳，建议 ≤ 3dB',        v:0.4, unit:'dB', max:3.5, warn:true},
+  {k:'wind',    n:'风声压制', d:'稳态环境噪声抵消强度（不影响瞬态低频）',         v:0.7, unit:'%',  max:100},
+  {k:'boom',    n:'防炸耳',   d:'枪声 / 爆炸峰值压缩 + 2~8kHz 去刺 + 限幅',       v:0.7, unit:'%',  max:100, warn:true},
+];
+const P = {}; DEFS.forEach(d=>P[d.k]=d.v);
+
+const slidersEl = document.getElementById('sliders');
+DEFS.forEach(d=>{
+  const wrap=document.createElement('div'); wrap.className='slider';
+  wrap.innerHTML=`<div class="lab"><b>${d.n}</b><em id="v_${d.k}"></em></div>
+    <input type="range" id="s_${d.k}" min="0" max="1" step="0.01" value="${d.v}" ${d.warn?'class="warn"':''}>
+    <div class="desc">${d.d}</div>`;
+  slidersEl.appendChild(wrap);
+  const s=wrap.querySelector('input'), out=document.getElementById('v_'+d.k);
+  const upd=()=>{ P[d.k]=+s.value; out.textContent = d.unit==='dB'
+      ? '+'+(P[d.k]*d.max).toFixed(1)+' dB'
+      : Math.round(P[d.k]*100)+'%'; applyEQ(); };
+  s.addEventListener('input',upd); upd();
+});
+// 旁路 A/B 快捷：空格键
+document.addEventListener('keydown',e=>{ if(e.code==='Space' && e.target.tagName!=='INPUT'){ e.preventDefault(); const b=document.getElementById('bypass'); b.checked=!b.checked; b.dispatchEvent(new Event('change')); }});
+
+// ---------------- Web Audio 图 ----------------
+let ctx=null, input=null, hpf=null, eqNodes=[], proc=null, master=null, analyser=null;
+let srcNode=null, micStream=null, usingMic=false;
+const S = {lp:[0,0], lp2:[0,0], lpFast:[0,0], lpSlow:[0,0], allFast:[0,0], allSlow:[0,0], fast:[0,0], slow:[0,0], hfFast:[0,0], hfSlow:[0,0], comp:1, peakIn:0, windAmt:0, gr:0};
+
+function buildGraph(){
+  ctx = new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});
+  const sr=ctx.sampleRate;
+  document.getElementById('srText').textContent=(sr/1000).toFixed(1)+' kHz';
+  input=ctx.createGain();
+  hpf=ctx.createBiquadFilter(); hpf.type='highpass'; hpf.Q.value=0.707;
+  const bands=[[220,0.9],[420,1.2],[1600,1.0],[3200,1.2],[6500,1.0]];
+  eqNodes=bands.map(([f,q])=>{const b=ctx.createBiquadFilter();b.type='peaking';b.frequency.value=f;b.Q.value=q;b.gain.value=0;return b;});
+  const deess=ctx.createBiquadFilter(); deess.type='peaking'; deess.frequency.value=9500; deess.Q.value=1.0; deess.gain.value=-2.5;
+  eqNodes.push(deess);
+
+  proc=ctx.createScriptProcessor(2048,2,2);
+  proc.onaudioprocess=onProcess(sr);
+  master=ctx.createGain(); master.gain.value=0.79; // -2dB headroom
+  analyser=ctx.createAnalyser(); analyser.fftSize=1024; analyser.smoothingTimeConstant=0.75;
+
+  let node=input;
+  [hpf,...eqNodes].forEach(n=>{node.connect(n);node=n;});
+  node.connect(proc); proc.connect(master); master.connect(analyser); analyser.connect(ctx.destination);
+  applyEQ();
+  document.getElementById('engineState').textContent='运行中';
+  drawSpectrum();
+}
+
+function applyEQ(){
+  if(!ctx) return;
+  const on=document.getElementById('bypass').checked;
+  const g = on ? [P.body*5, P.foot*3.5, P.quiet*4.5, P.surface*5, P.detail*3.5] : [0,0,0,0,0];
+  eqNodes.slice(0,5).forEach((n,i)=>n.gain.setTargetAtTime(g[i],ctx.currentTime,0.02));
+  eqNodes[5].gain.setTargetAtTime(on?-2.5:0,ctx.currentTime,0.02);
+  hpf.frequency.setTargetAtTime(on?(100+P.wind*120):20,ctx.currentTime,0.02);
+  if(master) master.gain.setTargetAtTime(on?0.79:1.0,ctx.currentTime,0.02);
+}
+document.getElementById('bypass').addEventListener('change',applyEQ);
+
+// ---------------- 核心 DSP（逐样本，逐声道） ----------------
+function onProcess(sr){
+  const cl=(v,a,b)=>v<a?a:(v>b?b:v);
+  const tau=a=>1-Math.exp(-1/(sr*a));
+  const aLP=1-Math.exp(-2*Math.PI*250/sr);      // 250Hz 低频分量
+  const aLP2=1-Math.exp(-2*Math.PI*1800/sr);    // 1.8kHz 分界，取高频
+  const aFast=tau(0.0015), aSlow=tau(0.08), aLpF=tau(0.006), aLpS=tau(0.45);
+  const aHfF=tau(0.003), aHfS=tau(0.4), aAtk=tau(0.003), aRel=tau(0.12);
+  return e=>{
+    const L=e.inputBuffer.getChannelData(0), R=e.inputBuffer.getChannelData(1);
+    const oL=e.outputBuffer.getChannelData(0), oR=e.outputBuffer.getChannelData(1);
+    const on=document.getElementById('bypass').checked;
+    const wind=P.wind*0.9, foot=P.foot, quiet=P.quiet, boom=P.boom;
+    const thr=0.55-boom*0.30;                 // 防炸耳阈值
+    let peakIn=0, windSum=0, n=0, grSum=0;
+    for(let i=0;i<L.length;i++){
+      const xl=L[i], xr=R[i];
+      peakIn=Math.max(peakIn,Math.abs(xl),Math.abs(xr));
+      if(!on){ oL[i]=xl; oR[i]=xr; continue; }
+      let out=[xl,xr];
+      for(let c=0;c<2;c++){
+        let x=out[c];
+        // 1) 稳态低频（风声）估计
+        S.lp[c]  += aLP *(x - S.lp[c]);
+        S.lp2[c] += aLP2*(x - S.lp2[c]);
+        const lp=S.lp[c], al=Math.abs(lp);
+        S.lpFast[c] += aLpF*(al-S.lpFast[c]);
+        S.lpSlow[c] += aLpS*(al-S.lpSlow[c]);
+        // 低频包络「长期≈短期」→ 稳态风声；瞬态时短期远大于长期 → 放行
+        const stead=cl(S.lpSlow[c]/(S.lpFast[c]+1e-6),0,1);
+        S.allFast[c] += aLpF*(Math.abs(x)-S.allFast[c]);
+        S.allSlow[c] += aLpS*(Math.abs(x)-S.allSlow[c]);
+        const steadAll=cl(S.allSlow[c]/(S.allFast[c]+1e-6),0,1);
+        const cut=wind*1.1*stead*lp;
+        windSum+=Math.abs(cut);
+        // 低频稳态分量抵消 + 全频稳态底噪轻压；瞬态（脚步/枪声）不触发
+        let y=(x-cut)*(1-wind*0.8*steadAll);
+        // 2) 高频去刺：枪声 2~8kHz 能量突增时只削高频，不闷掉整体
+        const hp=y-S.lp2[c];
+        S.hfFast[c]+=aHfF*(Math.abs(hp)-S.hfFast[c]);
+        S.hfSlow[c]+=aHfS*(Math.abs(hp)-S.hfSlow[c]);
+        const hiss=cl(S.hfFast[c]/(S.hfSlow[c]+1e-6)-1,0,3);
+        y-=boom*0.55*hiss*hp;
+        // 3) 瞬态增强（脚步/路面）+ 安静段提升（静步）
+        S.fast[c]+=aFast*(Math.abs(y)-S.fast[c]);
+        S.slow[c]+=aSlow*(Math.abs(y)-S.slow[c]);
+        const tr=cl(S.fast[c]/(S.slow[c]+1e-5)-2.5,0,2);
+        const qg=1+quiet*0.85*cl(1-S.slow[c]/0.05,0,1)*Math.pow(1-stead,2);
+        const tg=1+foot*0.45*tr*(1-steadAll);
+        let z=y*qg*tg;
+        out[c]=z;
+      }
+      // 4) 防炸耳：立体声联动压缩 + -1dBFS 硬限幅
+      const pk=Math.max(Math.abs(out[0]),Math.abs(out[1]));
+      let target=1;
+      if(pk>thr) target=1-boom*(1-thr/pk);
+      const a=target<S.comp?aAtk:aRel;
+      S.comp+=(target-S.comp)*a;
+      grSum+=-20*Math.log10(Math.max(S.comp,1e-4));
+      oL[i]=cl(out[0]*S.comp,-0.94,0.94);
+      oR[i]=cl(out[1]*S.comp,-0.94,0.94);
+      n++;
+    }
+    S.peakIn=S.peakIn*0.7+peakIn*0.3;
+    S.windAmt=n?cl(windSum/(n*0.02),0,1):0;
+    S.gr=n?grSum/n:0;
+  };
+}
+
+// ---------------- 音源 ----------------
+function stopSource(){
+  if(srcNode){try{srcNode.stop();}catch(_){} srcNode.disconnect(); srcNode=null;}
+  if(micStream){micStream.getTracks().forEach(t=>t.stop()); micStream=null;}
+  usingMic=false;
+  document.getElementById('btnMic').classList.remove('active');
+}
+async function ensure(){ if(!ctx) buildGraph(); if(ctx.state==='suspended') await ctx.resume(); }
+const status=(t)=>document.getElementById('status').textContent=t;
+
+function makeDemoBuffer(){
+  const sr=ctx.sampleRate, len=Math.floor(sr*8), buf=ctx.createBuffer(2,len,sr);
+  const l=buf.getChannelData(0), r=buf.getChannelData(1);
+  let brown=0, seed=12345;
+  const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296*2-1;};
+  for(let i=0;i<len;i++){
+    const t=i/sr;
+    // 稳态风声：棕噪声 + 缓慢起伏
+    brown=brown*0.985+rnd()*0.015;
+    const gust=0.6+0.4*Math.sin(2*Math.PI*0.13*t);
+    let v=brown*0.9*gust + rnd()*0.004;
+    // 脚步：每 0.62s 一次落地（80Hz thump + 中频质感 burst）
+    const step=t%0.62;
+    if(step<0.14){
+      const env=Math.exp(-step*34);
+      v+=Math.sin(2*Math.PI*82*step)*0.36*env;
+      v+=rnd()*Math.exp(-step*70)*0.16*(0.5+0.5*Math.sin(2*Math.PI*2400*step));
+    }
+    // 静步：每 1.37s 一次很轻的高频 click
+    const qs=t%1.37;
+    if(qs<0.035) v+=rnd()*Math.exp(-qs*180)*0.055;
+    // 枪声：2.1 / 4.7 / 6.8 秒
+    for(const g of [2.1,4.7,6.8]){
+      const d=t-g;
+      if(d>=0 && d<0.36){
+        const env=Math.exp(-d*22);
+        v+=rnd()*0.75*env + rnd()*0.45*Math.exp(-d*45)*(0.6+0.4*Math.sin(2*Math.PI*4200*d));
+      }
+    }
+    l[i]=v; r[i]=v*0.94+brown*0.06;
+  }
+  return buf;
+}
+let demoBuf=null;
+async function playBuffer(buf,label){
+  await ensure(); stopSource();
+  srcNode=ctx.createBufferSource(); srcNode.buffer=buf; srcNode.loop=true;
+  srcNode.connect(input); srcNode.start();
+  status('正在播放：'+label+' · 用「音效总开关」或空格键 A/B 对比');
+}
+document.getElementById('btnDemo').onclick=async()=>{
+  await ensure(); if(!demoBuf) demoBuf=makeDemoBuffer(); await playBuffer(demoBuf,'演示音');
+};
+document.getElementById('fileInput').onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{ await ensure(); const b=await f.arrayBuffer(); const buf=await ctx.decodeAudioData(b);
+       demoBuf=null; await playBuffer(buf,f.name); }
+  catch(err){ status('解码失败：'+err.message); }
+};
+document.getElementById('btnMic').onclick=async()=>{
+  try{ await ensure();
+    if(usingMic){ stopSource(); status('麦克风已关闭'); return; }
+    stopSource();
+    micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    usingMic=true; document.getElementById('btnMic').classList.add('active');
+    srcNode=ctx.createMediaStreamSource(micStream); srcNode.connect(input);
+    status('麦克风实时处理中 · 请戴耳机');
+  }catch(err){ status('麦克风不可用：'+err.message); }
+};
+document.getElementById('btnStop').onclick=()=>{ stopSource(); status('已停止'); };
+
+// ---------------- 可视化 ----------------
+const cv=document.getElementById('spectrum'), g2=cv.getContext('2d');
+let freqData=null;
+function drawSpectrum(){
+  requestAnimationFrame(drawSpectrum);
+  if(!analyser) return;
+  if(!freqData) freqData=new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(freqData);
+  const W=cv.width,H=cv.height; g2.clearRect(0,0,W,H);
+  const bins=64, bw=W/bins;
+  for(let i=0;i<bins;i++){
+    const idx=Math.floor(Math.pow(i/bins,1.8)*180);
+    const v=freqData[Math.min(idx,freqData.length-1)]/255;
+    const h=Math.max(2,v*(H-14));
+    const hue=i/bins<0.3?'#3ddc97':(i/bins<0.7?'#5aa9ff':'#ff9f43');
+    g2.fillStyle=hue; g2.globalAlpha=0.35+0.65*v;
+    g2.fillRect(i*bw+1,H-h,bw-2,h);
+  }
+  g2.globalAlpha=1;
+  const db=v=>v<=0.0001?'-∞':(20*Math.log10(v)).toFixed(1)+' dBFS';
+  document.getElementById('mIn').textContent=db(S.peakIn);
+  document.getElementById('mWind').textContent=Math.round(S.windAmt*100)+'%';
+  document.getElementById('mGr').textContent='-'+S.gr.toFixed(1)+' dB';
+}
+
+// ---------------- 导出 Equalizer APO 配置 ----------------
+document.getElementById('btnExport').onclick=()=>{
+  const f=(x)=>x.toFixed(1);
+  const hp=Math.round(100+P.wind*120);
+  const txt=`# DeltaSound · 由复刻原型导出（${new Date().toLocaleString('zh-CN')}）
+# 覆盖到 C:\\Program Files\\EqualizerAPO\\config\\config.txt
+Preamp: -4 dB
+
+Filter 1: ON HPQ Fc ${hp} Hz Q 0.707
+Filter 2: ON PK Fc 90 Hz Gain -2.0 dB Q 1.0
+Filter 3: ON PK Fc 220 Hz Gain ${f(P.body*5)} dB Q 0.9
+Filter 4: ON PK Fc 420 Hz Gain ${f(P.foot*3.5)} dB Q 1.2
+Filter 5: ON PK Fc 1600 Hz Gain ${f(P.quiet*4.5)} dB Q 1.0
+Filter 6: ON PK Fc 3200 Hz Gain ${f(P.surface*5)} dB Q 1.2
+Filter 7: ON PK Fc 6500 Hz Gain ${f(P.detail*3.5)} dB Q 1.0
+Filter 8: ON PK Fc 9500 Hz Gain -2.5 dB Q 1.0
+
+# 动态处理（防炸耳 / 风声抵消 / 瞬态增强）Equalizer APO 原生不支持：
+#   ReaComp  thr -18dB  ratio 4:1  attack 3ms  release 120ms
+#   ReaLimit ceiling -1.0dB
+# 或改用本原型的实时链 + VB-Cable / BlackHole 虚拟声卡。
+# 风声压制=${Math.round(P.wind*100)}%  防炸耳=${Math.round(P.boom*100)}%
+`;
+  const box=document.getElementById('exportBox'); box.value=txt; box.select();
+  try{ navigator.clipboard.writeText(txt); status('配置已生成并复制到剪贴板'); }
+  catch(_){ status('配置已生成，请手动复制'); }
+};
+</script>
+</body>
+</html>
