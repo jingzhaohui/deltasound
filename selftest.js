@@ -1,48 +1,131 @@
-// DeltaSound DSP 核心自检（与 index.html 中 onProcess 算法一致，纯 Node 可跑）
+// DeltaSound DSP 自检 — 与 dsp-core.js 是同一份算法（require 引入，不存在漂移）
 // 用法: node selftest.js
-// 合成 6s 信号: 稳态风声 / 脚步 / 枪声，验证「压风声 / 提脚步 / 压枪声」三个方向
-const sr=48000, cl=(v,a,b)=>v<a?a:(v>b?b:v), tau=a=>1-Math.exp(-1/(sr*a));
-const aLP=1-Math.exp(-2*Math.PI*250/sr), aLP2=1-Math.exp(-2*Math.PI*1800/sr);
-const aFast=tau(0.0015),aSlow=tau(0.08),aLpF=tau(0.006),aLpS=tau(0.45),aHfF=tau(0.003),aHfS=tau(0.4),aAtk=tau(0.003),aRel=tau(0.12);
-const S={lp:[0,0],lp2:[0,0],lpFast:[0,0],lpSlow:[0,0],allFast:[0,0],allSlow:[0,0],fast:[0,0],slow:[0,0],hfFast:[0,0],hfSlow:[0,0],comp:1};
-function process(x,P){
-  const wind=P.wind*0.9,foot=P.foot,quiet=P.quiet,boom=P.boom,thr=0.55-boom*0.30; const y=[];
-  for(let i=0;i<x.length;i++){
-    let out=[x[i],x[i]];
-    for(let c=0;c<2;c++){
-      let v=out[c];
-      S.lp[c]+=aLP*(v-S.lp[c]); S.lp2[c]+=aLP2*(v-S.lp2[c]);
-      const lp=S.lp[c],al=Math.abs(lp);
-      S.allFast[c]+=aLpF*(Math.abs(v)-S.allFast[c]); S.allSlow[c]+=aLpS*(Math.abs(v)-S.allSlow[c]);
-      const steadAll=cl(S.allSlow[c]/(S.allFast[c]+1e-6),0,1);
-      S.lpFast[c]+=aLpF*(al-S.lpFast[c]); S.lpSlow[c]+=aLpS*(al-S.lpSlow[c]);
-      const stead=cl(S.lpSlow[c]/(S.lpFast[c]+1e-6),0,1);
-      let z=(v-wind*1.1*stead*lp)*(1-wind*0.8*steadAll);
-      const hp=z-S.lp2[c];
-      S.hfFast[c]+=aHfF*(Math.abs(hp)-S.hfFast[c]); S.hfSlow[c]+=aHfS*(Math.abs(hp)-S.hfSlow[c]);
-      z-=boom*0.55*cl(S.hfFast[c]/(S.hfSlow[c]+1e-6)-1,0,3)*hp;
-      S.fast[c]+=aFast*(Math.abs(z)-S.fast[c]); S.slow[c]+=aSlow*(Math.abs(z)-S.slow[c]);
-      const tr=cl(S.fast[c]/(S.slow[c]+1e-5)-2.5,0,2);
-      out[c]=z*(1+quiet*0.85*cl(1-S.slow[c]/0.05,0,1)*Math.pow(1-stead,2))*(1+foot*0.45*tr*(1-steadAll));
-    }
-    const pk=Math.max(Math.abs(out[0]),Math.abs(out[1]));
-    let target=1; if(pk>thr) target=1-boom*(1-thr/pk);
-    S.comp+=(target-S.comp)*(target<S.comp?aAtk:aRel);
-    y.push(cl(out[0]*S.comp,-0.94,0.94));
+// 只测动态链；静态 EQ（Biquad 节点）在浏览器/Electron 图里，不参与本数值自检。
+const D = require('./dsp-core.js');
+const sr = 48000;
+const N = sr * 2;
+let seed = 7;
+const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296 * 2 - 1; };
+
+// ---------------- 合成信号 ----------------
+function windSeg() {                       // 稳态低频风声
+  const a = new Float64Array(N * 2); let brown = 0;
+  for (let i = 0; i < N; i++) {
+    brown = brown * 0.985 + rnd() * 0.015;
+    const v = brown * 0.4 + rnd() * 0.004;
+    a[2 * i] = v; a[2 * i + 1] = v * 0.98;
   }
-  return y;
+  return a;
 }
-let seed=7; const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296*2-1;};
-const N=sr*2,x=new Float64Array(N*3); let brown=0;
-for(let i=0;i<N;i++){brown=brown*0.985+rnd()*0.015;x[i]=brown*0.4+rnd()*0.004;}
-for(let i=0;i<N;i++){const t=i/sr,s=t%0.5;let v=rnd()*0.002;
-  if(s<0.12){const e=Math.exp(-s*36);v+=Math.sin(2*Math.PI*85*s)*0.30*e+rnd()*Math.exp(-s*70)*0.10;} x[N+i]=v;}
-for(let i=0;i<N;i++){const t=i/sr;let v=rnd()*0.002;
-  for(const g of [0.4,1.2]){const d=t-g;if(d>=0&&d<0.35){const e=Math.exp(-d*22);v+=rnd()*0.8*e+rnd()*0.4*Math.exp(-d*45)*Math.sin(2*Math.PI*4200*d);}} x[2*N+i]=v;}
-const y=process(x,{wind:0.7,foot:0.5,quiet:0.5,boom:0.7});
-const st=(a,s,e)=>{let r=0,p=0;for(let i=s;i<e;i++){r+=a[i]*a[i];p=Math.max(p,Math.abs(a[i]));}return{rms:Math.sqrt(r/(e-s)),peak:p};};
-for(const [n,s,e] of [['风声',0,N],['脚步',N,2*N],['枪声',2*N,3*N]]){
-  const a=st(x,s,e),b=st(y,s,e);
-  console.log(n.padEnd(4),'RMS',a.rms.toFixed(5),'→',b.rms.toFixed(5),`(${(20*Math.log10(b.rms/a.rms)).toFixed(1)}dB)`,'| 峰值',a.peak.toFixed(3),'→',b.peak.toFixed(3));
+function stepSeg(amp, ild) {               // 三区脚步：撞击 / 材质 / 碎物，L/R 带 ILD
+  const a = new Float64Array(N * 2);
+  for (let i = 0; i < N; i++) {
+    const s = (i / sr) % 0.5;
+    let v = rnd() * 0.0015;
+    if (s < 0.14) {
+      v += Math.sin(2 * Math.PI * 150 * s) * 0.22 * Math.exp(-s * 30) * amp;   // Zone1
+      v += Math.sin(2 * Math.PI * 1600 * s) * 0.10 * Math.exp(-s * 55) * amp;  // Zone2
+      v += rnd() * 0.07 * Math.exp(-s * 95) * amp;                              // Zone3 宽带摩擦
+    }
+    a[2 * i] = v; a[2 * i + 1] = v * ild;
+  }
+  return a;
 }
-console.log('NaN?',y.some(Number.isNaN),'clipped?',y.some(v=>Math.abs(v)>0.95));
+function gunSeg() {                        // 枪声：低频体 + 4.2kHz 刺耳
+  const a = new Float64Array(N * 2);
+  for (let i = 0; i < N; i++) {
+    const t = i / sr; let v = rnd() * 0.002;
+    for (const g of [0.4, 1.2]) {
+      const d = t - g;
+      if (d >= 0 && d < 0.35) {
+        v += rnd() * 0.8 * Math.exp(-d * 22);
+        v += rnd() * 0.4 * Math.exp(-d * 45) * Math.sin(2 * Math.PI * 4200 * d);
+      }
+    }
+    a[2 * i] = v; a[2 * i + 1] = v;
+  }
+  return a;
+}
+function noiseFloorSeg() {                 // 极安静底噪，验证 -58dBFS 门
+  const a = new Float64Array(N * 2);
+  for (let i = 0; i < N; i++) { const v = rnd() * 0.00002; a[2 * i] = v; a[2 * i + 1] = v; }
+  return a;
+}
+
+// ---------------- 跑链 ----------------
+function run(interleaved, params) {
+  const n = interleaved.length / 2;
+  const L = new Float64Array(n), R = new Float64Array(n);
+  for (let i = 0; i < n; i++) { L[i] = interleaved[2 * i]; R[i] = interleaved[2 * i + 1]; }
+  const oL = new Float64Array(n), oR = new Float64Array(n);
+  const p = Object.assign({}, D.DEFAULTS, params || {});
+  const dsp = D.createProcessor(sr, () => p, () => false);
+  dsp.process(L, R, oL, oR);
+  return { L, R, oL, oR, n, dsp };
+}
+function rms(a) { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * a[i]; return Math.sqrt(s / a.length); }
+function peak(a) { let p = 0; for (let i = 0; i < a.length; i++) p = Math.max(p, Math.abs(a[i])); return p; }
+const dB = (a, b) => 20 * Math.log10(b / Math.max(a, 1e-12));
+
+const P = D.DEFAULTS;
+let fail = 0;
+const check = (name, ok, detail) => { console.log((ok ? '  PASS ' : '  FAIL ') + name.padEnd(30) + detail); if (!ok) fail++; };
+
+console.log('=== 1. 三方向（风声 / 脚步 / 枪声 / 底噪）===');
+const segs = [['风声', windSeg()], ['脚步', stepSeg(1, 0.72)], ['枪声', gunSeg()], ['底噪', noiseFloorSeg()]];
+for (const [name, seg] of segs) {
+  const r = run(seg, P);
+  const a = rms(r.L), b = rms(r.oL);
+  const d = dB(a, b);
+  console.log('  ' + name.padEnd(4) + ' RMS ' + a.toFixed(6) + ' → ' + b.toFixed(6) +
+              ' (' + (d >= 0 ? '+' : '') + d.toFixed(1) + ' dB)' +
+              '  峰值 ' + peak(r.L).toFixed(3) + ' → ' + peak(r.oL).toFixed(3));
+  if (name === '风声') check('风声被压低', d < -1.0, d.toFixed(1) + ' dB');
+  if (name === '脚步') check('脚步被抬起', d > 0.5, '+' + d.toFixed(1) + ' dB');
+  if (name === '枪声') { check('枪声被削平', d < -2.0, d.toFixed(1) + ' dB');
+                         check('输出峰值不过冲', peak(r.oL) <= D.C.ceiling + 1e-6, peak(r.oL).toFixed(3)); }
+  if (name === '底噪') check('底噪不被拉高', d < 1.5, d.toFixed(2) + ' dB');
+  check(name + ' 无 NaN', !r.oL.some(Number.isNaN) && !r.oR.some(Number.isNaN), '');
+}
+
+console.log('=== 2. ILD（左右电平差）保持 ===');
+{
+  const seg = stepSeg(1, 0.60);                     // 输入 ILD = 20log10(0.60) ≈ -4.44dB
+  const inIld = 20 * Math.log10(0.60);
+  const ild = r => 20 * Math.log10(rms(r.oR) / rms(r.oL));
+  // 2a 纯机制：关掉去刺与风声抵消，只留联动增益，ILD 应严格不变
+  const pure = run(seg, { side: 0, boom: 0, wind: 0 });
+  const pureIld = ild(pure);
+  // 2b 默认全开：去刺会保留「共同低频」，ILD 小幅向 0 收敛属预期
+  const full = run(seg, { side: 0 });
+  const sided = run(seg, { side: 0.5 });
+  console.log('  输入 ' + inIld.toFixed(2) + ' dB | 纯联动 ' + pureIld.toFixed(2) +
+              ' dB | 全链路 ' + ild(full).toFixed(2) + ' dB | 开侧向定位 ' + ild(sided).toFixed(2) + ' dB');
+  check('纯联动严格保 ILD', Math.abs(pureIld - inIld) < 0.05,
+        '偏差 ' + Math.abs(pureIld - inIld).toFixed(3) + ' dB');
+  check('全链路 ILD 偏移可控', Math.abs(ild(full) - inIld) < 0.6,
+        '偏差 ' + Math.abs(ild(full) - inIld).toFixed(3) + ' dB');
+  check('侧向定位确实放大 L-R', ild(sided) < ild(full) - 0.2,
+        '差值 ' + (ild(full) - ild(sided)).toFixed(2) + ' dB');
+}
+
+console.log('=== 3. 远近层次（连续斜率向上压缩，不被拉平）===');
+{
+  const near = run(stepSeg(1.0, 1.0), P), far = run(stepSeg(0.25, 1.0), P);
+  const inRatio = rms(near.L) / rms(far.L), outRatio = rms(near.oL) / rms(far.oL);
+  console.log('  输入近/远 ' + (20 * Math.log10(inRatio)).toFixed(1) + ' dB → 输出 ' +
+              (20 * Math.log10(outRatio)).toFixed(1) + ' dB');
+  check('远脚步被抬得更多', outRatio < inRatio, '压缩量 ' + (20 * Math.log10(inRatio / outRatio)).toFixed(1) + ' dB');
+  check('远近仍可区分', outRatio > 1.6, '输出比 ' + outRatio.toFixed(2));
+}
+
+console.log('=== 4. 配置导出 ===');
+{
+  const txt = D.buildConfigText(P);
+  const ok = txt.includes('Preamp: -6.5 dB') && txt.includes('Filter 9: ON HSC') && txt.includes('ON LSC');
+  check('config.txt 含新曲线', ok, txt.split('\n').length + ' 行');
+}
+
+console.log('\n' + (fail ? '✗ ' + fail + ' 项未通过' : '✓ 全部通过') + '  | 采样率 ' + sr +
+            ' Hz | 前瞻 ' + D.createProcessor(sr, () => P, () => false).lookahead + ' 样本');
+process.exit(fail ? 1 : 0);

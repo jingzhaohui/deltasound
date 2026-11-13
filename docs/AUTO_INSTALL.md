@@ -8,8 +8,8 @@
 
 | 项 | 值 |
 |---|---|
-| 安装包 | `https://github.com/jingzhaohui/deltasound/releases/download/v1.0.0/DeltaSound-Setup-1.0.0.exe` |
-| 安装包 SHA256 | `CBFF16DF0E5D8EF3B46C9538253B67D73A5ECA0AC72DEC72D2A08966BADFC953` |
+| 安装包 | `https://github.com/jingzhaohui/deltasound/releases/download/v1.1.0/DeltaSound-Setup-1.1.0.exe` |
+| 安装包 SHA256 | `8E4086F79079F8507BB12F9683424D0B0B482DDDA405DF94FC9F84C33154BA85` |
 | 配置模板 | `https://raw.githubusercontent.com/jingzhaohui/deltasound/main/config.txt` |
 | 安装目录 | `%LOCALAPPDATA%\DeltaSound` |
 | APO 配置 | `C:\Program Files\EqualizerAPO\config\config.txt` |
@@ -23,12 +23,12 @@
 $ErrorActionPreference = 'Stop'
 $dir  = Join-Path $env:USERPROFILE 'Downloads\DeltaSound'
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
-$exe  = Join-Path $dir 'DeltaSound-Setup-1.0.0.exe'
+$exe  = Join-Path $dir 'DeltaSound-Setup-1.1.0.exe'
 $cfg  = Join-Path $dir 'config.txt'
-Invoke-WebRequest -Uri 'https://github.com/jingzhaohui/deltasound/releases/download/v1.0.0/DeltaSound-Setup-1.0.0.exe' -OutFile $exe
+Invoke-WebRequest -Uri 'https://github.com/jingzhaohui/deltasound/releases/download/v1.1.0/DeltaSound-Setup-1.1.0.exe' -OutFile $exe
 Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/jingzhaohui/deltasound/main/config.txt' -OutFile $cfg
 $hash = (Get-FileHash $exe -Algorithm SHA256).Hash
-if ($hash -ne 'CBFF16DF0E5D8EF3B46C9538253B67D73A5ECA0AC72DEC72D2A08966BADFC953') { throw "SHA256 不符，中止：$hash" }
+if ($hash -ne '8E4086F79079F8507BB12F9683424D0B0B482DDDA405DF94FC9F84C33154BA85') { throw "SHA256 不符，中止：$hash" }
 Start-Process -FilePath $exe -ArgumentList '/S' -Wait
 $app = Join-Path $env:LOCALAPPDATA 'DeltaSound\DeltaSound.exe'
 if (-not (Test-Path $app)) { throw '安装后未找到 DeltaSound.exe' }
@@ -72,11 +72,12 @@ Start-Process powershell -Verb RunAs -ArgumentList @('-NoProfile','-Command', $i
 | 备份 | `config.txt.deltasound.bak` 存在 |
 | 设备 | 用户确认耳机已勾选并已重启 |
 
-最后启动程序，提醒：关掉游戏内 7.1 / 杜比；空格键 A/B；还原原声用「恢复原声」或 `.bak`。
+最后启动程序，**按 `docs/INSTALL.md` 第 0 步提醒用户做免费的音频链路设置**（只留一层 HRTF、关 Windows 音频增强、输出立体声 24bit48k、游戏内音乐 0 / 夜间模式开、先做耳机自身频响补偿）。空格键 A/B；还原原声用「恢复原声」或 `.bak`。
 
 ## 5. 边界
 
-- 不做驱动签名、不改音频端点注册表、不装第三方 VST、不关闭 Windows 音频增强。
+- 不做驱动签名、不改音频端点注册表、不装第三方 VST。
+- **不自动修改 Windows 空间音效设置**，只提示用户按 INSTALL.md 第 0 步自行操作（涉及用户硬件偏好，不宜代改）。
 - **不自动重启电脑**，只提示。
 - SmartScreen 拦截时提示「更多信息 → 仍要运行」，不要改系统安全策略。
 - 不修改游戏内设置。
@@ -84,4 +85,4 @@ Start-Process powershell -Verb RunAs -ArgumentList @('-NoProfile','-Command', $i
 ## 6. 自动化程度
 
 自动：下载、校验、静默安装、检测 APO、提权写配置、自检报告。
-必须人做：Configurator 勾选耳机（GUI）、一次 UAC、一次重启。原因是 APO 属系统级音频组件，Windows 不允许无交互静默注册到具体播放端点。
+必须人做：Configurator 勾选耳机（GUI）、一次 UAC、一次重启、第 0 步系统/游戏内设置。原因是 APO 属系统级音频组件，Windows 不允许无交互静默注册到具体播放端点；空间音效与游戏混音属用户偏好，不宜由助手代改。

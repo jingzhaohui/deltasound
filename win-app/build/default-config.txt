@@ -1,57 +1,67 @@
 # ============================================================
-# DeltaSound — Equalizer APO 配置（三角洲行动 · 听声增强）
-# 复制到 C:\Program Files\EqualizerAPO\config\config.txt 后用 Peace / Configurator 生效
-# 只支持立体声 48kHz；游戏内请关闭所有音效增强、7.1 虚拟环绕
+# DeltaSound — Equalizer APO 配置（三角洲行动 · 听声增强）v1.1
+# 复制到 C:\Program Files\EqualizerAPO\config\config.txt
+# ============================================================
+# 曲线依据：三区脚步频段模型 + 低频向上掩蔽原理。
+# 证据链与同类项目对比见 docs/RESEARCH.md，设计取舍见 docs/DESIGN.md。
+#
+# 【装之前先做这几件免费的事，收益比调 EQ 更大】
+#  1. 只保留一层空间处理：游戏内 HRTF 开；关 Windows Sonic / Dolby Atmos /
+#     耳机厂商虚拟 7.1 / Windows「音频增强」全部关闭。输出设为立体声 24bit 48kHz。
+#  2. 游戏内：音乐 0、语音调低、音效 100，开「夜间模式 / 动态范围压缩」。
+#  3. 先按自己耳机的测量曲线（AutoEq / REW）做补偿，再叠加本文件；
+#     每副耳机原生频响不同，不存在通用最优解。
+# 只支持立体声；多声道会让空间线索与 EQ 判据失配。
 # ============================================================
 
-# EQ 一共抬升约 +11dB，先留 headroom，交给后级 limiter 收尾
-Preamp: -4 dB
+# 覆盖到 C:\Program Files\EqualizerAPO\config\config.txt
+# 曲线依据「三区脚步频段模型」与低频向上掩蔽原理，详见 docs/RESEARCH.md
+# 只处理静态 EQ；风声抵消 / 向上压缩 / 动态去刺 / 前瞻限幅需实时链或 VST
 
-# --- 1. 风声 / 环境低频轰鸣 ---------------------------------
-# 2 阶高通，切掉 140Hz 以下稳态隆隆；切太高性能损失"震感"
-Filter 1: ON HPQ Fc 140 Hz Q 0.707
-# 低频驻波/闷响轻微收一点（稳态噪声抑制的静态部分）
-Filter 2: ON PK Fc 90 Hz Gain -2.0 dB Q 1.0
+Preamp: -6.5 dB
 
-# --- 2. 震感：爆炸 / 载具低沉震动（副作用：盖住脚步） ---------
-Filter 3: ON PK Fc 220 Hz Gain 2.5 dB Q 0.9
+# 切次低频 rumble（20–80Hz 是最强掩蔽源），保留 150–450Hz 脚步体感与楼层线索
+Filter 1: ON HPQ Fc 125 Hz Q 0.707
+# 低架衰减：削减低频向上掩蔽，比提高频更有效且不会让枪声变刺
+Filter 2: ON LSC Fc 120 Hz Gain -3.5 dB Q 0.70
+# shallow scoop：500–800Hz 浑浊/箱声区
+Filter 3: ON PK Fc 700 Hz Gain -2.0 dB Q 1.40
+# Zone1 撞击 / Zone2 材质 / Zone2-3 瞬态方位 / Zone3 碎物距离
+Filter 4: ON PK Fc 220 Hz Gain 1.0 dB Q 1.10
+Filter 5: ON PK Fc 420 Hz Gain 1.8 dB Q 1.20
+Filter 6: ON PK Fc 1600 Hz Gain 1.8 dB Q 1.00
+Filter 7: ON PK Fc 3200 Hz Gain 2.4 dB Q 1.40
+Filter 8: ON PK Fc 6000 Hz Gain 1.0 dB Q 1.00
+# 6–12kHz 承载距离线索，只做 1dB 轻架；刺耳声交给动态去刺
+Filter 9: ON HSC Fc 10000 Hz Gain -1.0 dB Q 0.70
 
-# --- 3. 脚步：落地厚实声 --------------------------------------
-Filter 4: ON PK Fc 420 Hz Gain 1.5 dB Q 1.2
-
-# --- 4. 静步：蹲走轻脚步（副作用：人声/枪声变响） -------------
-Filter 5: ON PK Fc 1600 Hz Gain 2.5 dB Q 1.0
-
-# --- 5. 路面：铁板/木板/碎石质感 -------------------------------
-Filter 6: ON PK Fc 3200 Hz Gain 3.0 dB Q 1.2
-
-# --- 6. 细碎声：草丛/衣物摩擦（副作用：更刺耳，别拉满） -------
-Filter 7: ON PK Fc 6500 Hz Gain 2.0 dB Q 1.0
-
-# --- 7. 去刺：枪声齿音区静态兜底 -------------------------------
-Filter 8: ON PK Fc 9500 Hz Gain -2.5 dB Q 1.0
+# 动态处理（Equalizer APO 原生不支持），两条路二选一：
+#  (a) Peace GUI 挂 VST：ReaComp(thr -18dB, 4:1, atk 3ms, rel 120ms)
+#      → ReaLimit(ceiling -1.0dB, lookahead 1.5ms)
+#  (b) 用同目录 index.html 的实时链 + VB-Cable / BlackHole 虚拟声卡
+#  完整参数：向上压缩 -24dBFS(全带宽慢包络) / 2.5:1 / 上限 +14dB / 底噪门 -58dBFS；
+#            枪声动态去刺 2.5–9kHz 最多 -9dB；侧信号最多 +4dB
+# 风声压制=70%  防炸耳=70%  侧向定位=50%
 
 # ============================================================
-# 档位速查（把上面对应 Gain 换成下表数值）
-#   档位      F1 HPQ   F3 220  F4 420  F5 1.6k  F6 3.2k  F7 6.5k
-#   轻         120Hz    +1.0    +0.5    +1.0     +1.5     +0.5
-#   标准       140Hz    +2.5    +1.5    +2.5     +3.0     +2.0   ← 当前
-#   较强       160Hz    +4.0    +2.5    +3.5     +4.0     +3.0
-#   强         180Hz    +5.0    +3.5    +4.5     +5.0     +3.5
-# 「细碎声」超过 +3dB 会明显发刺，与「防炸耳」冲突，建议 ≤ +3。
+# 档位速查（把上面对应数值替换；Preamp 恒定 -6.5dB 留 headroom）
+#   档位   HP(Hz)  LSC   MUD   F4/220  F5/420  F6/1.6k  F7/3.2k  F8/6k  HSC
+#   轻       100   -2.0  -1.0   +0.5    +1.0    +1.0     +1.5    +0.5   -0.5
+#   标准     125   -3.5  -2.0   +1.0    +1.8    +1.8     +2.4    +1.0   -1.0  ← 当前
+#   较强     135   -4.5  -2.5   +2.0    +2.5    +2.5     +3.2    +1.8   -1.0
+#   强       140   -5.5  -3.0   +3.0    +3.5    +3.0     +4.0    +2.5   -1.5
+# 「细碎声」6kHz 超过 +3dB 会明显发刺；8kHz 以上不宜再抬（听力疲劳）。
+# 任何档位总提升都在 +10dB 以上，必须配合后级限幅，否则会削波。
 # ============================================================
 
-# --- 8. 防炸耳（动态部分，Equalizer APO 原生没有压缩器） --------
+# --- 防炸耳 / 静步（动态部分，Equalizer APO 原生没有压缩器） --------
 # 两条路二选一：
 #  (a) Peace GUI 挂 VST：ReaComp(thr -18dB, ratio 4:1, atk 3ms, rel 120ms)
-#      → ReaLimit(ceiling -1.0dB)；参数在 VST 面板里设一次即可。
-#  (b) 用同目录 index.html 的实时原型跑完整动态链（含瞬态增强、
-#      稳态风声抵消、高频去刺、限幅），配 VB-Cable / BlackHole 虚拟声卡。
+#      → ReaLimit(ceiling -1.0dB, lookahead 1.5ms)。参数在 VST 面板里设一次。
+#      注意：压缩器务必设为「立体声联动」，逐声道独立会破坏左右定位。
+#  (b) 用同目录 index.html 的实时原型跑完整动态链（向上压缩 / 稳态风声抵消 /
+#      枪声动态去刺 / 侧信号增强 / 前瞻限幅），配 VB-Cable / BlackHole 虚拟声卡。
 # Equalizer APO 的 VST 行形如（路径按本机实际改，取消注释启用）：
 # VSTPlugin: "C:\Program Files\VSTPlugins\ReaComp.dll"
 # VSTPlugin: "C:\Program Files\VSTPlugins\ReaLimit.dll"
-# ============================================================
-
-# --- 9. 可选：立体声轻微中间提升，帮助定位（默认关闭） ----------
-# Copy: L=L R=R
 # ============================================================

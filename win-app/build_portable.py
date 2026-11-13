@@ -12,6 +12,17 @@ DST = os.path.join(BASE, 'dist-portable', 'DeltaSound')
 APP = os.path.join(DST, 'resources', 'app')
 
 
+def robust_copy(src, dst):
+    """某些宿主环境会代理 shutil.copy2 并在覆盖时误报 ENOENT；回退到纯读写。"""
+    try:
+        shutil.copy2(src, dst)
+    except Exception:
+        with open(src, 'rb') as f:
+            data = f.read()
+        with open(dst, 'wb') as f:
+            f.write(data)
+
+
 def copy_tree_renaming_exe():
     count = 0
     for root, _dirs, files in os.walk(SRC):
@@ -20,7 +31,7 @@ def copy_tree_renaming_exe():
         os.makedirs(out, exist_ok=True)
         for name in files:
             target = 'DeltaSound.exe' if name == 'electron.exe' and rel == '.' else name
-            shutil.copy2(os.path.join(root, name), os.path.join(out, target))
+            robust_copy(os.path.join(root, name), os.path.join(out, target))
             count += 1
     return count
 
@@ -35,24 +46,25 @@ def main():
         ('main.js', 'main.js'),
         ('preload.js', 'preload.js'),
         ('renderer/index.html', 'renderer/index.html'),
+        ('renderer/dsp-core.js', 'renderer/dsp-core.js'),
         ('build/icon.ico', 'build/icon.ico'),
         ('build/icon.png', 'build/icon.png'),
         ('build/default-config.txt', 'build/default-config.txt'),
     ]:
-        shutil.copy2(os.path.join(BASE, src), os.path.join(APP, dst))
+        robust_copy(os.path.join(BASE, src), os.path.join(APP, dst))
 
     with open(os.path.join(APP, 'package.json'), 'w', encoding='utf-8') as f:
         json.dump({
             'name': 'deltasound',
             'productName': 'DeltaSound',
-            'version': '1.0.0',
+            'version': '1.1.0',
             'description': 'Game audio EQ: suppress wind, lift footsteps, tame gunshots',
             'main': 'main.js',
             'author': 'DeltaSound',
             'license': 'MIT'
         }, f, ensure_ascii=False, indent=2)
 
-    shutil.copy2(os.path.join(BASE, 'README.md'), os.path.join(DST, '安装说明.md'))
+    robust_copy(os.path.join(BASE, 'README.md'), os.path.join(DST, '安装说明.md'))
     size = sum(os.path.getsize(os.path.join(r, f))
                for r, _d, fs in os.walk(DST) for f in fs)
     print('files copied:', n)

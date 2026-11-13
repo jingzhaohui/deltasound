@@ -1,8 +1,8 @@
 ﻿Unicode true
 !define APPNAME "DeltaSound"
-!define APPVERSION "1.0.0"
+!define APPVERSION "1.1.0"
 Name "${APPNAME} ${APPVERSION}"
-OutFile "dist\DeltaSound-Setup-1.0.0.exe"
+OutFile "dist\DeltaSound-Setup-1.1.0.exe"
 InstallDir "$LOCALAPPDATA\DeltaSound"
 InstallDirRegKey HKCU "Software\DeltaSound" "InstallDir"
 RequestExecutionLevel user
@@ -29,7 +29,7 @@ Section "安装"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
   WriteRegStr HKCU "Software\DeltaSound" "InstallDir" "$INSTDIR"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DeltaSound" "DisplayName" "DeltaSound 1.0.0"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DeltaSound" "DisplayName" "DeltaSound 1.1.0"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DeltaSound" "DisplayVersion" "${APPVERSION}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DeltaSound" "Publisher" "DeltaSound"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DeltaSound" "DisplayIcon" "$INSTDIR\DeltaSound.exe"
