@@ -1,5 +1,5 @@
 # ============================================================
-# DeltaSound — Equalizer APO 配置（三角洲行动 · 听声增强复刻）
+# DeltaSound — Equalizer APO 配置（三角洲行动 · 听声增强）
 # 复制到 C:\Program Files\EqualizerAPO\config\config.txt 后用 Peace / Configurator 生效
 # 只支持立体声 48kHz；游戏内请关闭所有音效增强、7.1 虚拟环绕
 # ============================================================

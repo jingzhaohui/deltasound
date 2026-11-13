@@ -46,7 +46,7 @@ def main():
             'name': 'deltasound',
             'productName': 'DeltaSound',
             'version': '1.0.0',
-            'description': '三角洲行动听声增强 - 独立 DSP 复刻',
+            'description': 'Game audio EQ: suppress wind, lift footsteps, tame gunshots',
             'main': 'main.js',
             'author': 'DeltaSound',
             'license': 'MIT'

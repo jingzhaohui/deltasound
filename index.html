@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DeltaSound · 三角洲听声增强复刻原型</title>
+<title>DeltaSound · 三角洲听声增强 · 实时原型</title>
 <style>
   :root{
     --bg:#0d1117; --panel:#151b23; --panel2:#1b232e; --line:#2a3543;
@@ -65,7 +65,7 @@
 <div class="wrap">
   <header>
     <div>
-      <h1>Delta<span>Sound</span> · 三角洲听声增强复刻原型</h1>
+      <h1>Delta<span>Sound</span> · 三角洲听声增强 · 实时原型</h1>
       <div class="sub">风声压下去 / 脚步浮上来 / 枪声不刺耳 —— 独立 DSP 实现</div>
     </div>
     <div class="badge">引擎状态 <b id="engineState">未启动</b> · <span id="srText">—</span></div>
@@ -360,7 +360,7 @@ function drawSpectrum(){
 document.getElementById('btnExport').onclick=()=>{
   const f=(x)=>x.toFixed(1);
   const hp=Math.round(100+P.wind*120);
-  const txt=`# DeltaSound · 由复刻原型导出（${new Date().toLocaleString('zh-CN')}）
+  const txt=`# DeltaSound · 由 DeltaSound 导出（${new Date().toLocaleString('zh-CN')}）
 # 覆盖到 C:\\Program Files\\EqualizerAPO\\config\\config.txt
 Preamp: -4 dB
 
